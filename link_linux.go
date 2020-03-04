@@ -2867,6 +2867,49 @@ func parseVfInfo(data []syscall.NetlinkRouteAttr, id int) VfInfo {
 			vfr := nl.DeserializeVfRate(element.Value[:])
 			vf.MaxTxRate = vfr.MaxTxRate
 			vf.MinTxRate = vfr.MinTxRate
+        // Vf stats, added by Patrick Kutch
+        case nl.IFLA_VF_STATS:
+            stats, err := nl.ParseRouteAttr(element.Value)
+            if err != nil {
+                break
+            }
+            var valueVar uint64
+            for _, stat := range stats {
+                // convert the stat
+                if err := binary.Read(bytes.NewBuffer(stat.Value), nl.NativeEndian(), &valueVar); err != nil {
+                    
+                    break
+                }
+                // store it
+                switch stat.Attr.Type {
+                    case nl.IFLA_VF_STATS_RX_PACKETS:
+                        vf.RxPackets = valueVar
+                    case nl.IFLA_VF_STATS_TX_PACKETS:
+                        vf.TxPackets = valueVar
+                    case nl.IFLA_VF_STATS_RX_BYTES:
+                        vf.RxBytes = valueVar
+                    case nl.IFLA_VF_STATS_TX_BYTES:
+                        vf.TxBytes = valueVar
+                    case nl.IFLA_VF_STATS_MULTICAST:
+                        vf.Multicast = valueVar
+                    case nl.IFLA_VF_STATS_BROADCAST:
+                        vf.Broadcast = valueVar
+                    case nl.IFLA_VF_STATS_RX_DROPPED:
+                        vf.RxDropped = valueVar
+                    case nl.IFLA_VF_STATS_TX_DROPPED:
+                        vf.TxDropped = valueVar
+                }
+            }
+            
+        // Added by Patrick Kutch
+        case nl.IFLA_VF_RSS_QUERY_EN:
+            result := nl.DeserializeVfRssQueryEn(element.Value)
+            vf.RssQuery = result.Setting
+            
+        // Added by Patrick Kutch    
+        case nl.IFLA_VF_TRUST:
+            result := nl.DeserializeVfTrust(element.Value)
+            vf.Trust = result.Setting            
 		}
 	}
 	return vf
